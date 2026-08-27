@@ -30,8 +30,47 @@ jobs:
           name: mon-app-image
           path: mon-app.tar
 
-  push-image:
+  run-tests:
     needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Récupérer l'image testée
+        uses: actions/download-artifact@v4
+        with:
+          name: mon-app-image
+      - name: Charger l'image
+        run: docker load -i mon-app.tar
+      - name: Démarrer la stack avec l'image déjà testée
+        run: |
+          cat <<'EOF' > compose.ci.yaml
+          services:
+            web:
+              image: mon-app:ci
+          EOF
+          docker compose -f compose.yaml -f compose.ci.yaml up -d
+      - name: Attendre que l'application réponde
+        run: |
+          for i in $(seq 1 10); do
+            curl --fail http://localhost:5000 && break
+            sleep 2
+          done
+      - name: Installer les dépendances de test
+        run: pip install -r requirements-test.txt
+      - name: Exécuter la suite de tests
+        run: pytest tests/ -v --junitxml=rapport-tests.xml
+      - name: Publier le rapport de tests
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rapport-tests
+          path: rapport-tests.xml
+      - name: Arrêter la stack
+        if: always()
+        run: docker compose down -v
+
+  push-image:
+    needs: [build-and-test, run-tests]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
