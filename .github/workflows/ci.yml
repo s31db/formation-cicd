@@ -33,9 +33,6 @@ jobs:
   run-tests:
     needs: build-and-test
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      checks: write
     steps:
       - uses: actions/checkout@v4
       - name: Récupérer l'image testée
@@ -63,12 +60,21 @@ jobs:
       - name: Exécuter la suite de tests
         run: pytest tests/ -v --junitxml=rapport-tests.xml
       - name: Résumé des tests dans GitHub
-        uses: dorny/test-reporter@v1
         if: always()
-        with:
-          name: Résultats pytest
-          path: rapport-tests.xml
-          reporter: java-junit
+        run: |
+          python3 - <<'PYEOF' >> "$GITHUB_STEP_SUMMARY"
+          import xml.etree.ElementTree as ET
+          root = ET.parse("rapport-tests.xml").getroot()
+          suite = root.find("testsuite")
+          print(f"### Résultats pytest — {suite.get('tests')} tests, {suite.get('failures')} échec(s)")
+          print()
+          print("| Test | Résultat | Durée |")
+          print("|---|---|---|")
+          for tc in suite.findall("testcase"):
+              failed = tc.find("failure") is not None or tc.find("error") is not None
+              icon = "❌" if failed else "✅"
+              print(f"| `{tc.get('name')}` | {icon} | {float(tc.get('time')):.3f}s |")
+          PYEOF
       - name: Publier le rapport de tests
         if: always()
         uses: actions/upload-artifact@v4
