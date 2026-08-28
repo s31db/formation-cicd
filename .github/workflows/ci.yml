@@ -33,6 +33,9 @@ jobs:
   run-tests:
     needs: build-and-test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
     steps:
       - uses: actions/checkout@v4
       - name: Récupérer l'image testée
@@ -58,18 +61,14 @@ jobs:
       - name: Installer les dépendances de test
         run: pip install -r requirements-test.txt
       - name: Exécuter la suite de tests
-        run: |
-          set -o pipefail
-          pytest tests/ -v --junitxml=rapport-tests.xml | tee pytest-output.txt
+        run: pytest tests/ -v --junitxml=rapport-tests.xml
       - name: Résumé des tests dans GitHub
+        uses: dorny/test-reporter@v1
         if: always()
-        run: |
-          {
-            echo "### Résultats pytest"
-            echo '```'
-            cat pytest-output.txt
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
+        with:
+          name: Résultats pytest
+          path: rapport-tests.xml
+          reporter: java-junit
       - name: Publier le rapport de tests
         if: always()
         uses: actions/upload-artifact@v4
