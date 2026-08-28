@@ -58,7 +58,18 @@ jobs:
       - name: Installer les dépendances de test
         run: pip install -r requirements-test.txt
       - name: Exécuter la suite de tests
-        run: pytest tests/ -v --junitxml=rapport-tests.xml
+        run: |
+          set -o pipefail
+          pytest tests/ -v --junitxml=rapport-tests.xml | tee pytest-output.txt
+      - name: Résumé des tests dans GitHub
+        if: always()
+        run: |
+          {
+            echo "### Résultats pytest"
+            echo '```'
+            cat pytest-output.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Publier le rapport de tests
         if: always()
         uses: actions/upload-artifact@v4
