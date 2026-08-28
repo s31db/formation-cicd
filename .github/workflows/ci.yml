@@ -102,7 +102,7 @@ jobs:
           exit-code: "1"
 
   notify:
-    needs: [build-and-test, run-tests, scan-image]
+    needs: [build-and-test, run-tests]
     if: always()
     runs-on: ubuntu-latest
     steps:
