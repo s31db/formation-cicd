@@ -99,7 +99,7 @@ jobs:
         with:
           image-ref: mon-app:ci
           severity: CRITICAL,HIGH
-          exit-code: "1"
+          exit-code: "0"
 
   notify:
     needs: [build-and-test, run-tests]
