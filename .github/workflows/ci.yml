@@ -14,7 +14,6 @@ jobs:
       - uses: ./.github/actions/build-image
       - name: Vérifier que l'image répond
         run: |
-          docker load -i mon-app.tar
           docker network create ci-net
           docker run -d --name db --network ci-net \
             -e POSTGRES_DB=mabase -e POSTGRES_USER=app -e POSTGRES_PASSWORD=secret \
@@ -85,8 +84,37 @@ jobs:
         if: always()
         run: docker compose down -v
 
+  scan-image:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupérer l'image testée
+        uses: actions/download-artifact@v4
+        with:
+          name: mon-app-image
+      - name: Charger l'image
+        run: docker load -i mon-app.tar
+      - name: Scanner avec Trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: mon-app:ci
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+
+  notify:
+    needs: [build-and-test, run-tests, scan-image]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notifier Discord du résultat
+        run: |
+          STATUT="${{ contains(needs.*.result, 'failure') && 'failure' || 'success' }}"
+          curl -X POST "${{ secrets.DISCORD_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"content\": \"Pipeline $STATUT sur ${{ github.sha }}\"}"
+
   push-image:
-    needs: [build-and-test, run-tests]
+    needs: [build-and-test, run-tests, scan-image]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
