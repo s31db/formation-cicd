@@ -1,0 +1,11 @@
+name: Build mon-app image
+description: Construit l'image Docker de mon-app et l'exporte en artifact
+runs:
+  using: composite
+  steps:
+    - name: Construire l'image
+      shell: bash
+      run: docker build -t mon-app:ci .
+    - name: Exporter l'image
+      shell: bash
+      run: docker save mon-app:ci -o mon-app.tar
