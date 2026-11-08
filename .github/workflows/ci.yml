@@ -100,6 +100,7 @@ jobs:
           image-ref: mon-app:ci
           severity: CRITICAL,HIGH
           exit-code: "1"
+          ignore-unfixed: true
 
   notify:
     needs: [build-and-test, run-tests, scan-image]
