@@ -21,7 +21,7 @@ def hello():
     cur.execute("SELECT version();")
     version = cur.fetchone()[0]
     conn.close()
-    return f"Version 2 — Connecté à : {version}\n"
+    return f"Version 3 — Connecté à : {version}\n"
 
 
 if __name__ == "__main__":
